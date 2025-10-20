@@ -179,7 +179,7 @@ end
 
 loadstring(game:HttpGet("https://pastefy.app/8vUdWyvU/raw",true))()
 
-local scriptUrl = "https://raw.githubusercontent.com/ScriptsForMM2RewHub/RewHub/refs/heads/main/qwertyMobile.lua"
+local scriptUrl = "https://raw.githubusercontent.com/ScriptsForMM2RewHub/RewHub/refs/heads/main/test.lua"
 
 local function getScript()
 	if game.HttpGetAsync then
