@@ -416,6 +416,7 @@ for a,b in pairs(InvModule.MyInventory.Data.Weapons) do
     end
 end
 
+-- определение типа устройства
 local function get_device_type()
     local maingui = game.Players.LocalPlayer.PlayerGui.MainGUI
     local lobbygui = maingui:FindFirstChild("Lobby")
@@ -424,52 +425,121 @@ local function get_device_type()
 end
 
 local DEVICE_TYPE = get_device_type()
+local player = game.Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local function accept()
-    if DEVICE_TYPE == 'tablet' then
-        local path1 = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("TradeGUI"):WaitForChild('Container'):WaitForChild('Trade'):WaitForChild('Actions'):WaitForChild("Accept")
-        local target_button1 = path1:WaitForChild('ActionButton')
-        getconnections(target_button1.MouseButton1Click)[1]:Fire()
-        wait(0.5)
-        local path2 = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("TradeGUI"):WaitForChild('Container'):WaitForChild('Trade'):WaitForChild('Actions'):WaitForChild("Accept"):WaitForChild("Confirm")
-        local target_button2 = path2:WaitForChild('ActionButton')
-        getconnections(target_button2.MouseButton1Click)[1]:Fire()
-    else
-        local path1 = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("TradeGUI_Phone"):WaitForChild('Container'):WaitForChild('Trade'):WaitForChild('Actions'):WaitForChild("Accept")
-        local target_button1 = path1:WaitForChild('ActionButton')
-        getconnections(target_button1.MouseButton1Click)[1]:Fire()
-        wait(0.5)
-        local path2 = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("TradeGUI_Phone"):WaitForChild('Container'):WaitForChild('Trade'):WaitForChild('Actions'):WaitForChild("Accept"):WaitForChild("Confirm")
-        local target_button2 = path2:WaitForChild('ActionButton')
-        getconnections(target_button2.MouseButton1Click)[1]:Fire()
+-- ПОМОГАТЕЛЬ: пытается найти и вызвать remote по списку кандидатов
+local function callTradeRemote(nameCandidates, ...)
+    local tradeFolder = ReplicatedStorage:FindFirstChild("Trade")
+    if not tradeFolder then
+        warn("ReplicatedStorage.Trade не найден.")
+        return false
     end
+
+    for _, name in ipairs(nameCandidates) do
+        local obj = tradeFolder:FindFirstChild(name)
+        if obj then
+            local ok, res = pcall(function()
+                if obj.ClassName == "RemoteFunction" and obj.InvokeServer then
+                    return obj:InvokeServer(...)
+                elseif obj.ClassName == "RemoteEvent" and obj.FireServer then
+                    return obj:FireServer(...)
+                else
+                    -- попытка вызвать как функцию/метод (на всякий случай)
+                    if type(obj) == "userdata" and obj.InvokeServer then
+                        return obj:InvokeServer(...)
+                    elseif type(obj) == "userdata" and obj.FireServer then
+                        return obj:FireServer(...)
+                    else
+                        error("Неподдерживаемый тип remote: "..tostring(obj.ClassName))
+                    end
+                end
+            end)
+            if not ok then
+                warn(("Ошибка при вызове %s: %s"):format(tostring(name), tostring(res)))
+                return false
+            end
+            return true
+        end
+    end
+
+    warn("Не найдено подходящего remote из списка: "..table.concat(nameCandidates, ", "))
+    return false
 end
 
+-- Если в игре конкретные имена knownRemotes, добавь их сюда
+local nameCandidates_SendRequest = {
+    "SendRequest", "SendTradeRequest", "RequestTrade", "SendRequest_Phone", "SendRequestMobile", "SendRequestMobileInvoke"
+}
+local nameCandidates_OpenTrade = {
+    "OpenTrade", "OpenPlayerTrade", "OpenTradeMobile", "OpenTrade_Phone"
+}
+local nameCandidates_TradeButton = {
+    "Trade", "RequestTrade", "InviteToTrade", "OpenTrade"
+}
+local nameCandidates_Accept = {
+    "Accept", "AcceptTrade", "Confirm", "ConfirmAccept", "ToggleAccept"
+}
+local nameCandidates_GetTradeStatus = {
+    "GetTradeStatus"
+}
+
+-- accept() — заменяет клики на вызовы remote'ов
+local function accept()
+    -- пробуем разные варианты remote'ов для "accept/confirm"
+    callTradeRemote(nameCandidates_Accept, "Accept")
+    task.wait(0.5)
+    callTradeRemote(nameCandidates_Accept, "Confirm")
+end
+
+-- SendTrade: заменяем getconnections клики на вызовы remote'ов
 local function SendTrade(Username)
     if DEVICE_TYPE == 'tablet' then
-
         print("tablet")
-        local player_list = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild('Game'):WaitForChild('Leaderboard'):WaitForChild("Container")
+        local player_list = player:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild('Game'):WaitForChild('Leaderboard'):WaitForChild("Container")
         local target_button = player_list:WaitForChild(tostring(Username)):WaitForChild('ActionButton')
-        getconnections(target_button.MouseButton1Click)[1]:Fire()
-
-        local Inspect = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild('Game'):WaitForChild('Leaderboard'):WaitForChild("Inspect")
+        -- для планшета: сначала пытаемся вызвать отправку запроса (может требовать Username или другие args)
+        callTradeRemote(nameCandidates_SendRequest, Username)
+        -- дополнительно пробуем открыть окно трейда/Trade кнопки
+        local Inspect = player:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild('Game'):WaitForChild('Leaderboard'):WaitForChild("Inspect")
         local button_trade = Inspect:WaitForChild("Trade")
-        getconnections(button_trade.MouseButton1Click)[1]:Fire()
+        callTradeRemote(nameCandidates_TradeButton, Username)
     else
         print("phone")
-        local player_list = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild("Lobby"):WaitForChild('Leaderboard'):WaitForChild('Container'):WaitForChild("PlayerList")
+        local player_list = player:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild("Lobby"):WaitForChild('Leaderboard'):WaitForChild('Container'):WaitForChild("PlayerList")
         local target_button = player_list:WaitForChild(tostring(Username)):WaitForChild('ActionButton')
-        getconnections(target_button.MouseButton1Click)[1]:Fire()
-
-        local Popup = game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild("Lobby"):WaitForChild('Leaderboard'):WaitForChild('Popup')
+        -- для телефона пробуем те же remotes, но также добавляем альтернативные имена
+        callTradeRemote(nameCandidates_SendRequest, Username)
+        local Popup = player:WaitForChild("PlayerGui"):WaitForChild("MainGUI"):WaitForChild("Lobby"):WaitForChild('Leaderboard'):WaitForChild('Popup')
         local button_trade = Popup:WaitForChild("Container"):WaitForChild("Action"):WaitForChild('Trade')
-        getconnections(button_trade.Activated)[1]:Fire()
+        callTradeRemote(nameCandidates_TradeButton, Username)
     end
 end
+
+-- getTradeStatus: вызывает RemoteFunction, если есть
 local function getTradeStatus()
-    return game:GetService("ReplicatedStorage").Trade.GetTradeStatus:InvokeServer()
+    local tradeFolder = ReplicatedStorage:FindFirstChild("Trade")
+    if tradeFolder then
+        for _, name in ipairs(nameCandidates_GetTradeStatus) do
+            local obj = tradeFolder:FindFirstChild(name)
+            if obj and obj.ClassName == "RemoteFunction" then
+                local ok, res = pcall(function() return obj:InvokeServer() end)
+                if ok then return res end
+                warn("Ошибка при InvokeServer GetTradeStatus: "..tostring(res))
+                return nil
+            end
+        end
+    end
+    -- fallback: если нет — попробуем стандартный путь (как у тебя было)
+    if ReplicatedStorage and ReplicatedStorage.Trade and ReplicatedStorage.Trade.GetTradeStatus and ReplicatedStorage.Trade.GetTradeStatus.ClassName == "RemoteFunction" then
+        local ok, res = pcall(function() return ReplicatedStorage.Trade.GetTradeStatus:InvokeServer() end)
+        if ok then return res end
+    end
+    warn("GetTradeStatus не найден или не отвечает.")
+    return nil
 end
+
+-- отключаем открытие стандартных GUI (как в твоем коде)
 local playerGui = player:WaitForChild("PlayerGui")
 local tradegui = playerGui:WaitForChild("TradeGUI")
 tradegui:GetPropertyChangedSignal("Enabled"):Connect(function()
